@@ -1,0 +1,9 @@
+# Phase 1 development dependencies. Pinned to exact versions installed and
+# verified in this phase (Constitution Principle 8: dependencies added only
+# when a phase actually needs them).
+pydantic==2.13.4
+httpx==0.28.1
+pytest==9.1.1
+pytest-cov==7.1.0
+ruff==0.15.21
+mypy==2.3.0
