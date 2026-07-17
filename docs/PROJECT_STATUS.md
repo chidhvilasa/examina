@@ -1,11 +1,11 @@
 # EXAMINA Project Status
 
 ## Current State
-Current Phase: Phase 3 Complete
-Current Version: 0.3.0
+Current Phase: Phase 4 Complete
+Current Version: 0.4.0
 Specification Version: 1.0.0 (FROZEN), BRIDGE_SPEC amended to 1.1.0 (see ADR-0001)
 Architecture: FROZEN (bridge field-level contract amended via ADR-0001)
-Implementation: REPORT ENGINE COMPLETE
+Implementation: API COMPLETE
 
 ## Completed Phases
 - [x] Phase -1: GitHub Repository Setup
@@ -48,23 +48,40 @@ Implementation: REPORT ENGINE COMPLETE
   (`process_upload()`, the 7-step orchestrator), and `orchestrator.py`
   (`run_analysis()`, connecting the upload pipeline to the bridge and
   report engine). No bridge/ or report/ files were modified.
+- [x] Phase 4: API
+  Implemented the FastAPI application in `src/examina/api/`:
+  `database.py` (SQLAlchemy `ReportRecord`/`FeedbackRecord`/
+  `IncorrectAnalysisRecord`, in-memory SQLite in test mode via
+  `EXAMINA_TEST_MODE=1`), `auth.py` (invite-code and admin-token
+  verification via `hmac.compare_digest`), `models.py` (all
+  request/response Pydantic models), `rate_limit.py` (slowapi, 5
+  per-route limits), and `routes/{status,health,analyze,report,feedback,
+  admin}.py`. `POST /analyze` composes the pipeline/bridge/report-engine
+  steps directly (rather than calling `run_analysis()`) so it can surface
+  `BridgeConfidence.active_hypotheses`/`unresolved_contradictions` in its
+  response without modifying `pipeline/`/`report/` — see the module
+  docstring in `src/examina/api/routes/analyze.py`. No `bridge/`,
+  `report/`, or `pipeline/` files were modified. `python-magic-bin`'s
+  Windows/macOS-only-wheel finding from Phase 3 (ADR-0002) also motivated
+  keeping this phase's new dependencies (`fastapi`, `uvicorn`, `slowapi`,
+  `sqlalchemy`, `psutil`, `python-multipart`) all pure-Python/cross-platform.
 
 ## Active Phase
-None — awaiting Phase 4 prompt
+None — awaiting Phase 5 prompt
 
 ## Next Phase
-Phase 4: API
+Phase 5: UI
 
 ## Test Count
-257 passing, 1 skipped (EICAR/ClamAV live-daemon test — see
+338 passing, 1 skipped (EICAR/ClamAV live-daemon test — see
 specs/TECH_DEBT.md TD-006), 0 failing
 
 ## Coverage
-100% on src/examina/pipeline/, src/examina/report/, src/examina/bridge/,
-and src/examina/language/
+100% on src/examina/api/, src/examina/pipeline/, src/examina/report/,
+src/examina/bridge/, and src/examina/language/
 
 ## Known Blockers
-None blocking Phase 4. One standing workflow characteristic to be aware
+None blocking Phase 5. One standing workflow characteristic to be aware
 of: direct `git push` to `main` is permanently rejected by branch
 protection (required status checks can't be evaluated for a commit GitHub
 has never seen). All changes to `main` land via a short-lived branch + PR,
@@ -90,4 +107,9 @@ Phase 3 signal-ID wiring) added in Phase 2. TD-006 (EICAR/ClamAV test
 skips without a live clamd daemon), TD-007 (tar/bzip2/7z archives
 rejected immediately pending a vetted extraction library), and TD-008
 (MIME detection via signature table instead of python-magic — see
-ADR-0002) newly added this phase.
+ADR-0002) added in Phase 3. TD-009 (`GET /admin/rules` returns no real
+data pending PRISM rule-health bridge integration), TD-010 (rate
+limiting uses an in-memory, per-process backend — Redis recommended
+before multi-worker production deployment), and TD-011 (`@app.on_event`
+is deprecated in favor of FastAPI's `lifespan` pattern) newly added this
+phase.

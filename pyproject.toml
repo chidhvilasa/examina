@@ -1,14 +1,21 @@
 [project]
 name = "examina"
-version = "0.0.0"
+version = "0.4.0"
 description = "EXAMINA — Digital Evidence Intelligence for Journalists"
 requires-python = ">=3.11"
 dependencies = [
     "pydantic>=2.0",
+    "fastapi>=0.139",
+    "uvicorn[standard]>=0.51",
+    "slowapi>=0.1.10",
+    "sqlalchemy>=2.0",
+    "psutil>=7.2",
+    "python-multipart>=0.0.32",
 ]
 
 [project.scripts]
 examina = "examina.cli:app"
+examina-api = "examina.api.main:app"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
