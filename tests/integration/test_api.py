@@ -1,7 +1,12 @@
 """
 Integration tests for the FastAPI application — real pipeline, real
 report engine, real (in-memory) database. clamav_mode="skip" via
-CLAMAV_MODE (set in tests/conftest.py).
+CLAMAV_MODE (set in tests/conftest.py). The bridge client is a fake
+(fixed BridgeResult, see _FakeBridgeClient below) injected via
+monkeypatching examina.api.routes.analyze.get_bridge_client — since
+Phase 7, LocalBridgeClient makes a real subprocess call into PRISM, and
+these API-layer tests must stay hermetic and PRISM-independent (see
+tests/integration/test_real_bridge.py for the real-PRISM-backed tests).
 """
 
 from __future__ import annotations
@@ -12,9 +17,19 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import SQLAlchemyError
 
+import examina.api.routes.analyze as analyze_module
 from examina.api.app import create_app
 from examina.api.database import get_session
-from examina.bridge.types import BridgeError, BridgeRequest, BridgeResult
+from examina.bridge.client import BridgeClient
+from examina.bridge.types import (
+    BridgeConfidence,
+    BridgeError,
+    BridgeFact,
+    BridgeHypothesis,
+    BridgeRequest,
+    BridgeResult,
+    BridgeTimelineEvent,
+)
 from examina.pipeline.exceptions import DecompressionBombError, MalwareDetectedError
 
 JPEG_BYTES = bytes.fromhex("ffd8ffe000104a46494600010100000100010000") + b"\x00" * 20
@@ -23,11 +38,67 @@ INVITE_HEADERS = {"Authorization": "Bearer test-invite-code"}
 ADMIN_HEADERS = {"Authorization": "Bearer test-admin-token"}
 
 
+def _fake_bridge_result(request: BridgeRequest) -> BridgeResult:
+    return BridgeResult(
+        request_id=request.request_id,
+        bridge_version="bridge:1.0",
+        prism_version="fake:1.0",
+        rule_set_version="fake:1.0",
+        extractor_versions={"fake": "1.0"},
+        processing_time_ms=0,
+        facts=[
+            BridgeFact(
+                fact_id="fact-1",
+                statement="This file declares creation metadata.",
+                fact_type="PROVENANCE",
+                provenance_source_type="declared",
+                extractor="fake-extractor:1.0",
+                extraction_confidence=0.9,
+                source_reliability=0.8,
+                raw_value={},
+            )
+        ],
+        contradictions=[],
+        hypotheses=[
+            BridgeHypothesis(
+                hypothesis_id="hyp-1",
+                description="This file is consistent with an unedited original.",
+                confidence=0.6,
+                rank=1,
+            ),
+        ],
+        timeline=[BridgeTimelineEvent(sequence=1, description="Event.", confidence=0.7)],
+        reconstruction_confidence=BridgeConfidence(
+            overall=0.72,
+            penalty_from_contradictions=0.0,
+            unresolved_contradictions=0,
+            active_hypotheses=1,
+        ),
+        errors=[],
+        partial_analysis=False,
+        partial_reason=None,
+    )
+
+
+class _FakeBridgeClient(BridgeClient):
+    async def analyze(self, request: BridgeRequest) -> BridgeResult:
+        return _fake_bridge_result(request)
+
+    async def health_check(self) -> bool:
+        return True
+
+    def get_bridge_version(self) -> str:
+        return "bridge:1.0"
+
+
 @pytest.fixture(scope="module")
 def client() -> Iterator[TestClient]:
+    mp = pytest.MonkeyPatch()
+    mp.setattr(analyze_module, "get_bridge_client", lambda: _FakeBridgeClient())
     app = create_app()
     with TestClient(app) as test_client:
         yield test_client
+    mp.undo()
 
 
 def _upload_jpeg(client: TestClient) -> dict[str, object]:

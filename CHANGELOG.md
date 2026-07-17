@@ -4,6 +4,12 @@ All notable changes to EXAMINA are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.7.0] — Real PRISM bridge integration
+
+EXAMINA now calls a real PRISM analysis for every upload instead of
+returning fixed placeholder data. Verified end to end against real JPEG
+and PDF files, PRISM-offline handling, and analysis determinism.
+
 ## [0.6.0] — Hardening and beta preparation
 
 Production readiness pass ahead of the research beta: CORS restricted to

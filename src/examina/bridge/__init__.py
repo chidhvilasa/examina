@@ -23,6 +23,7 @@ from examina.bridge.types import (
     BridgeResult,
     BridgeTimelineEvent,
 )
+from examina.bridge.validator import parse_bridge_payload, validate_bridge_payload
 
 __all__ = [
     "BridgeClient",
@@ -37,4 +38,6 @@ __all__ = [
     "LocalBridgeClient",
     "RemoteBridgeClient",
     "get_bridge_client",
+    "parse_bridge_payload",
+    "validate_bridge_payload",
 ]

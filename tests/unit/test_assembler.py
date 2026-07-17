@@ -1,17 +1,19 @@
-"""Tests for src/examina/report/assembler.py — uses LocalBridgeClient stub fixtures."""
+"""Tests for src/examina/report/assembler.py — uses inline BridgeResult fixtures.
+
+BridgeResult objects are built directly here rather than via
+LocalBridgeClient, which since Phase 7 makes a real subprocess call into
+PRISM — unit tests must stay hermetic and PRISM-independent (see
+tests/integration/test_real_bridge.py for the real-PRISM-backed tests).
+"""
 
 from __future__ import annotations
 
-import asyncio
-from pathlib import Path
 from uuid import UUID
 
-from examina.bridge.local_client import LocalBridgeClient
 from examina.bridge.types import (
     BridgeConfidence,
     BridgeFact,
     BridgeHypothesis,
-    BridgeRequest,
     BridgeResult,
     BridgeTimelineEvent,
 )
@@ -27,17 +29,8 @@ from examina.report.schema import (
 VALID_HASH = "c" * 64
 
 
-def _bridge_request() -> BridgeRequest:
-    return BridgeRequest(
-        file_bytes=b"stub-bytes",
-        file_hash=VALID_HASH,
-        file_type="JPEG",
-        examina_version="0.2.0",
-    )
-
-
 def _stub_bridge_result() -> BridgeResult:
-    return asyncio.run(LocalBridgeClient(prism_path=Path("../PRISM")).analyze(_bridge_request()))
+    return _bridge_result()
 
 
 def _bridge_result(**overrides: object) -> BridgeResult:
