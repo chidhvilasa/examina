@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import os
 from datetime import UTC, datetime
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, Response
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 import examina
 from examina.api.database import get_engine
@@ -20,6 +23,30 @@ from examina.api.routes.feedback import router as feedback_router
 from examina.api.routes.health import router as health_router
 from examina.api.routes.report import router as report_router
 from examina.api.routes.status import router as status_router
+
+_DEFAULT_ALLOWED_ORIGINS = "http://localhost:5173"
+
+
+def _get_allowed_origins() -> list[str]:
+    raw = os.environ.get("EXAMINA_ALLOWED_ORIGINS", _DEFAULT_ALLOWED_ORIGINS)
+    return [origin.strip() for origin in raw.split(",") if origin.strip()]
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Sets baseline security headers on every response. Content-Security-Policy
+    is deliberately left to the Nginx/Caddy layer (see deployment/), since it
+    varies between the API and the UI's static-file responses."""
+
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Cache-Control"] = "no-store"
+        return response
 
 
 def create_app() -> FastAPI:
@@ -34,6 +61,14 @@ def create_app() -> FastAPI:
     limiter = get_limiter()
     app.state.limiter = limiter
     app.add_middleware(SlowAPIMiddleware)
+    app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_get_allowed_origins(),
+        allow_credentials=False,
+        allow_methods=["GET", "POST", "DELETE"],
+        allow_headers=["Authorization", "Content-Type"],
+    )
 
     @app.on_event("startup")
     async def startup() -> None:

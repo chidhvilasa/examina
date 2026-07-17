@@ -1,0 +1,39 @@
+# EXAMINA API — systemd service unit.
+#
+# Install:
+#   sudo cp deployment/examina.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable examina
+#   sudo systemctl start examina
+#
+# Assumes the `examina` user/group exist, the repository is checked out
+# at /opt/examina, a virtualenv exists at /opt/examina/.venv, and a
+# production .env file exists at /opt/examina/.env (never committed to
+# the repository — see deployment/README.md).
+
+[Unit]
+Description=EXAMINA Digital Evidence Intelligence API
+After=network.target
+
+[Service]
+Type=simple
+User=examina
+Group=examina
+WorkingDirectory=/opt/examina
+Environment=EXAMINA_ENV=production
+EnvironmentFile=/opt/examina/.env
+ExecStart=/opt/examina/.venv/bin/python -m examina.api.main
+Restart=on-failure
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=examina
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/examina/data
+
+[Install]
+WantedBy=multi-user.target

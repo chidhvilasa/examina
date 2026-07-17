@@ -1,0 +1,47 @@
+# EXAMINA production Caddyfile — alternative to deployment/nginx.conf.
+# Caddy handles TLS (via Let's Encrypt) automatically; no certificate
+# paths to manage by hand.
+#
+# Replace `your-domain.com` and `your-email@domain.com` before use.
+
+your-domain.com {
+    # TLS via Let's Encrypt — automatic, renews itself
+    tls your-email@domain.com
+
+    # Body size limit — enforced before FastAPI. Matches EXAMINA's own
+    # 20MB upload limit plus a small margin for multipart overhead.
+    request_body {
+        max_size 22MB
+    }
+
+    # Security headers. EXAMINA's own SecurityHeadersMiddleware sets the
+    # same X-* headers on API responses; they are repeated here so they
+    # also cover the UI's static-file responses, which the middleware
+    # never sees.
+    header {
+        X-Frame-Options DENY
+        X-Content-Type-Options nosniff
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy strict-origin-when-cross-origin
+        Cache-Control no-store
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"
+        -Server
+    }
+
+    # Rate limiting (requires the caddy-ratelimit module — not built in):
+    #   caddy add-package github.com/mholt/caddy-ratelimit
+    # This is a second, edge-layer limit in front of EXAMINA's own
+    # slowapi-based per-process limit — defense in depth, not a
+    # replacement for it. See deployment/nginx.conf for the equivalent
+    # Nginx-side configuration if Caddy's rate-limit module is not used.
+
+    # Proxy to FastAPI
+    reverse_proxy localhost:8000 {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+        transport http {
+            read_timeout 120s
+            write_timeout 30s
+        }
+    }
+}
