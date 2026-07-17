@@ -1,11 +1,12 @@
 # EXAMINA Project Status
 
 ## Current State
-Current Phase: Phase 5 Complete
-Current Version: 0.5.0
+Current Phase: Phase 6 Complete
+Current Version: 0.6.0
 Specification Version: 1.0.0 (FROZEN), BRIDGE_SPEC amended to 1.1.0 (see ADR-0001)
-Architecture: FROZEN (bridge field-level contract amended via ADR-0001)
+Architecture: FROZEN
 Implementation: API + UI COMPLETE
+Status: BETA READY
 
 ## Completed Phases
 - [x] Phase -1: GitHub Repository Setup
@@ -95,29 +96,78 @@ Implementation: API + UI COMPLETE
   full Playwright-driven manual test (upload → analyze → report render →
   all six cards → copy-to-clipboard → feedback submit → back navigation),
   zero console errors. See `specs/TECH_DEBT.md` TD-012.
+- [x] Phase 6: Hardening and Beta Preparation
+  Zero new features — made what exists production-ready. Verified (and
+  documented in `docs/SECURITY_NOTES.md`) that no EXAMINA code path
+  extracts ZIP contents to disk, so no zip-slip fix was needed; added
+  `tests/integration/test_pipeline_stress.py` (5 tests: a large
+  Pillow-generated JPEG through the full pipeline, the 20MB size-check
+  boundary from both sides, a PyMuPDF-generated PDF with large embedded
+  images, and a central-directory-lying ZIP bomb rejected by the MIME
+  allowlist before `archive_check.py` ever runs — defense-in-depth,
+  demonstrated). Added `CORSMiddleware` (`EXAMINA_ALLOWED_ORIGINS` env
+  var, comma-separated, defaults to the Vite dev server origin) and
+  `SecurityHeadersMiddleware` (`X-Content-Type-Options`,
+  `X-Frame-Options`, `X-XSS-Protection`, `Referrer-Policy`,
+  `Cache-Control: no-store`) to `src/examina/api/app.py` — this closes
+  TD-012 from Phase 5. Ran `pip-audit` against `requirements/dev.txt`:
+  zero vulnerabilities found; wired into CI as the `dependency-audit`
+  job. Captured `requirements/frozen_v060.txt` via `pip freeze` for
+  environment reproducibility. Added `deployment/nginx.conf`,
+  `deployment/caddy/Caddyfile`, `deployment/examina.service`, and a
+  complete `deployment/README.md`. Added `docs/BETA_GUIDE.md` and
+  rewrote `README.md` and `CHANGELOG.md`. Bumped
+  `src/examina/__init__.py`/`pyproject.toml` from the stale 0.4.0 (never
+  updated in Phase 5) to 0.6.0. No `bridge/`, `report/`, or UI files were
+  modified; no new features or endpoints added.
 
 ## Active Phase
-None — awaiting Phase 6 prompt
+None — awaiting Phase 7 prompt
 
 ## Next Phase
-Phase 6: Hardening and Beta Preparation
+None scheduled — beta operation. Deploy to Hetzner, distribute invite
+codes, run the beta for 6-8 weeks, collect feedback, write the paper.
 
 ## Test Count
-Python: 338 passing, 1 skipped (EICAR/ClamAV live-daemon test — see
+Python: 343 passing, 1 skipped (EICAR/ClamAV live-daemon test — see
 specs/TECH_DEBT.md TD-006), 0 failing
 UI: `tsc --noEmit` clean (0 errors), `npm run build` clean (0 errors)
+Dependency audit: `pip-audit` clean (0 vulnerabilities)
 
 ## Coverage
 100% on src/examina/api/, src/examina/pipeline/, src/examina/report/,
 src/examina/bridge/, and src/examina/language/ (UI has no automated test
-suite this phase — out of scope per the Phase 5 prompt)
+suite — out of scope per the Phase 5 prompt; the Phase 6 stress tests
+live in tests/integration/ and are exercised by `pytest tests/` but not
+by the CI `unit-tests` job, which scopes to tests/unit/ only)
+
+## Beta Readiness Checklist
+- [x] Security pipeline implemented (7 steps)
+- [x] Forensic analysis via PRISM bridge
+- [x] Report generation with full traceability
+- [x] API with auth, rate limiting, persistence
+- [x] React UI with all 6 report cards
+- [x] Deployment documentation
+- [x] Beta guide for journalists
+- [x] CORS configured
+- [x] Security headers configured
+- [x] Dependency audit clean
+- [x] Frozen requirements for reproducibility
+- [ ] ClamAV enabled (requires a live clamd daemon on the deployment host)
+- [ ] Domain configured
+- [ ] TLS certificate issued
+- [ ] Production .env configured
 
 ## Known Blockers
-None blocking Phase 5. One standing workflow characteristic to be aware
-of: direct `git push` to `main` is permanently rejected by branch
-protection (required status checks can't be evaluated for a commit GitHub
-has never seen). All changes to `main` land via a short-lived branch + PR,
-merged once CI reports green on the PR — see specs/TECH_DEBT.md TD-002.
+None blocking beta deployment from the codebase side. The four
+unchecked items above are host-provisioning steps (domain, TLS,
+production secrets, a live ClamAV daemon), not code — see
+`deployment/README.md` for each. One standing workflow characteristic to
+be aware of: direct `git push` to `main` is permanently rejected by
+branch protection (required status checks can't be evaluated for a
+commit GitHub has never seen). All changes to `main` land via a
+short-lived branch + PR, merged once CI reports green on the PR — see
+specs/TECH_DEBT.md TD-002.
 
 ## Specification Amendment (Phase 1)
 `specs/BRIDGE_SPEC_v1.0.md`'s field-level contract for `BridgeRequest`/
@@ -145,4 +195,6 @@ limiting uses an in-memory, per-process backend — Redis recommended
 before multi-worker production deployment), and TD-011 (`@app.on_event`
 is deprecated in favor of FastAPI's `lifespan` pattern) added in Phase 4.
 TD-012 (no CORS middleware on the API; the UI relies on the Vite dev
-proxy / same-origin production deployment instead) added in Phase 5.
+proxy / same-origin production deployment instead) added in Phase 5,
+**resolved in Phase 6** (`CORSMiddleware` added to
+`src/examina/api/app.py`, configured via `EXAMINA_ALLOWED_ORIGINS`).
