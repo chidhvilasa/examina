@@ -1,11 +1,11 @@
 # EXAMINA Project Status
 
 ## Current State
-Current Phase: Phase 1 Complete
-Current Version: 0.1.0
+Current Phase: Phase 2 Complete
+Current Version: 0.2.0
 Specification Version: 1.0.0 (FROZEN), BRIDGE_SPEC amended to 1.1.0 (see ADR-0001)
 Architecture: FROZEN (bridge field-level contract amended via ADR-0001)
-Implementation: BRIDGE INTERFACE COMPLETE
+Implementation: REPORT ENGINE COMPLETE
 
 ## Completed Phases
 - [x] Phase -1: GitHub Repository Setup
@@ -20,21 +20,34 @@ Implementation: BRIDGE INTERFACE COMPLETE
   (`src/examina/language/guard.py`) enforcing the 10-word forbidden
   vocabulary with whole-word matching. EXAMINA code never calls PRISM
   directly — no `prism.*` import anywhere in `src/examina/`.
+- [x] Phase 2: Report Engine
+  Implemented the full BridgeResult → ExaminaReport pipeline in
+  `src/examina/report/`: `schema.py` (all Pydantic v2 report models,
+  including `TraceableString.checked()` enforcing the language guard on
+  every stored string), `clustering.py` (the six fixed evidence families
+  per `specs/EVIDENCE_CLUSTERING_v1.0.md`), `confidence.py` (the five
+  plain-language confidence dimensions per
+  `specs/CONFIDENCE_TRANSLATION_v1.0.md`), `decision.py` (verdict
+  determination and the fixed Assessment templates per
+  `specs/DECISION_MODEL_v1.0.md`), `history.py` (timeline reconstruction),
+  and `assembler.py` (`assemble_report()`, the single entry point
+  orchestrating all of the above). No bridge/ or language/guard.py logic
+  was modified.
 
 ## Active Phase
-None — awaiting Phase 2 prompt
+None — awaiting Phase 3 prompt
 
 ## Next Phase
-Phase 2: Report Engine
+Phase 3: Upload Pipeline
 
 ## Test Count
-68 passing, 0 failing
+160 passing, 0 failing
 
 ## Coverage
-100% on src/examina/bridge/ and src/examina/language/
+100% on src/examina/report/, src/examina/bridge/, and src/examina/language/
 
 ## Known Blockers
-None blocking Phase 2. One standing workflow characteristic to be aware
+None blocking Phase 3. One standing workflow characteristic to be aware
 of: direct `git push` to `main` is permanently rejected by branch
 protection (required status checks can't be evaluated for a commit GitHub
 has never seen). All changes to `main` land via a short-lived branch + PR,
@@ -54,5 +67,6 @@ per the spec amendment policy).
 ## Technical Debt
 See specs/TECH_DEBT.md — TD-001 resolved (CI workflow exists and reports
 on every PR). TD-002 remains, permanent by design. TD-003 (bridge client
-stubs, to be replaced in Phase 2) and TD-004 (BRIDGE_SPEC v1.0→v1.1
-amendment record) newly added this phase.
+stubs) and TD-004 (BRIDGE_SPEC v1.0→v1.1 amendment record) added in
+Phase 1. TD-005 (`HistoryEvent.supporting_signals` always empty pending
+Phase 3 signal-ID wiring) newly added this phase.
