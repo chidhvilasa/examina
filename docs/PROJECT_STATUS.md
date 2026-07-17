@@ -1,11 +1,11 @@
 # EXAMINA Project Status
 
 ## Current State
-Current Phase: Phase 4 Complete
-Current Version: 0.4.0
+Current Phase: Phase 5 Complete
+Current Version: 0.5.0
 Specification Version: 1.0.0 (FROZEN), BRIDGE_SPEC amended to 1.1.0 (see ADR-0001)
 Architecture: FROZEN (bridge field-level contract amended via ADR-0001)
-Implementation: API COMPLETE
+Implementation: API + UI COMPLETE
 
 ## Completed Phases
 - [x] Phase -1: GitHub Repository Setup
@@ -65,20 +65,52 @@ Implementation: API COMPLETE
   Windows/macOS-only-wheel finding from Phase 3 (ADR-0002) also motivated
   keeping this phase's new dependencies (`fastapi`, `uvicorn`, `slowapi`,
   `sqlalchemy`, `psutil`, `python-multipart`) all pure-Python/cross-platform.
+- [x] Phase 5: UI
+  Implemented the React/TypeScript single-page UI in `src/examina/ui/`
+  (Vite + React 19 + TypeScript, Tailwind v4, shadcn/ui): `lib/types.ts`
+  (mirrors `src/examina/api/models.py`/`src/examina/report/schema.py`),
+  `lib/api.ts` (`analyzeFile`, `fetchReport`, `deleteReport`,
+  `submitFeedback`, `reportIncorrect`), `App.tsx` (two-view state machine,
+  `useState` only, no routing/Redux), `components/UploadView.tsx`,
+  `components/ReportView.tsx` composing all six report cards
+  (`ReportHeader`, `ExpiryBanner`, `AssessmentCard`, `HistoryCard`,
+  `EvidenceCard`, `ConfidenceCard`, `FeedbackCard`), and the
+  `CopyButton`/`VerdictBadge`/`ConfidenceBar` primitives. No Python files
+  were modified. Two implementation notes:
+  (1) `AssessmentCard`'s large verdict display always renders
+  `assessment.verdict_plain.text` (already language-checked server-side)
+  for every verdict, rather than a UI-hardcoded string for
+  `LIKELY_AUTHENTIC` — the prompt's own architecture-compliance checklist
+  requires the UI never generate its own verdict language, and
+  `decision.py`'s `_VERDICT_PLAIN[LIKELY_AUTHENTIC]` text already matches
+  the prompt's example almost verbatim, so no information is lost.
+  (2) `lib/api.ts`'s `API_BASE` defaults to an empty string (same-origin)
+  instead of the literal `http://localhost:8000` fallback the prompt's
+  Step 4 snippet showed — with that literal default, a real browser
+  request from the Vite dev server (port 5173) to the API (port 8000) is
+  cross-origin and fails CORS preflight, since the API has no CORS
+  middleware and Phase 5 forbids adding one. Same-origin requests are
+  forwarded by the Vite dev proxy (`vite.config.ts`, Step 10) instead,
+  which is what Step 10 says the proxy is for. Confirmed working via a
+  full Playwright-driven manual test (upload → analyze → report render →
+  all six cards → copy-to-clipboard → feedback submit → back navigation),
+  zero console errors. See `specs/TECH_DEBT.md` TD-012.
 
 ## Active Phase
-None — awaiting Phase 5 prompt
+None — awaiting Phase 6 prompt
 
 ## Next Phase
-Phase 5: UI
+Phase 6: Hardening and Beta Preparation
 
 ## Test Count
-338 passing, 1 skipped (EICAR/ClamAV live-daemon test — see
+Python: 338 passing, 1 skipped (EICAR/ClamAV live-daemon test — see
 specs/TECH_DEBT.md TD-006), 0 failing
+UI: `tsc --noEmit` clean (0 errors), `npm run build` clean (0 errors)
 
 ## Coverage
 100% on src/examina/api/, src/examina/pipeline/, src/examina/report/,
-src/examina/bridge/, and src/examina/language/
+src/examina/bridge/, and src/examina/language/ (UI has no automated test
+suite this phase — out of scope per the Phase 5 prompt)
 
 ## Known Blockers
 None blocking Phase 5. One standing workflow characteristic to be aware
@@ -111,5 +143,6 @@ ADR-0002) added in Phase 3. TD-009 (`GET /admin/rules` returns no real
 data pending PRISM rule-health bridge integration), TD-010 (rate
 limiting uses an in-memory, per-process backend — Redis recommended
 before multi-worker production deployment), and TD-011 (`@app.on_event`
-is deprecated in favor of FastAPI's `lifespan` pattern) newly added this
-phase.
+is deprecated in favor of FastAPI's `lifespan` pattern) added in Phase 4.
+TD-012 (no CORS middleware on the API; the UI relies on the Vite dev
+proxy / same-origin production deployment instead) added in Phase 5.

@@ -43,6 +43,24 @@ jobs:
       - run: pytest tests/unit/ -v --tb=short
         continue-on-error: false
 
+  ui-build:
+    name: ui-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install dependencies
+        working-directory: src/examina/ui
+        run: npm ci
+      - name: TypeScript check
+        working-directory: src/examina/ui
+        run: npx tsc --noEmit
+      - name: Build
+        working-directory: src/examina/ui
+        run: npm run build
+
   secret-scan:
     name: secret-scan
     runs-on: ubuntu-latest
