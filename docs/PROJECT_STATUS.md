@@ -1,8 +1,8 @@
 # EXAMINA Project Status
 
 ## Current State
-Current Phase: Phase 2 Complete
-Current Version: 0.2.0
+Current Phase: Phase 3 Complete
+Current Version: 0.3.0
 Specification Version: 1.0.0 (FROZEN), BRIDGE_SPEC amended to 1.1.0 (see ADR-0001)
 Architecture: FROZEN (bridge field-level contract amended via ADR-0001)
 Implementation: REPORT ENGINE COMPLETE
@@ -33,21 +33,38 @@ Implementation: REPORT ENGINE COMPLETE
   and `assembler.py` (`assemble_report()`, the single entry point
   orchestrating all of the above). No bridge/ or language/guard.py logic
   was modified.
+- [x] Phase 3: Upload Pipeline
+  Implemented the 7-step upload security pipeline in
+  `src/examina/pipeline/`: `exceptions.py` (the `UploadSecurityError`
+  hierarchy), `config.py` (`UploadConfig`), `steps/size_check.py`,
+  `steps/mime_check.py` (byte-signature detection only — see
+  `docs/adr/ADR-0002-mime-detection-signature-table.md` for why a
+  dependency-free signature table replaces `python-magic`),
+  `steps/filename_sanitize.py` (UUID4 identity, original filename never
+  read), `steps/hash_file.py` (SHA-256 canonical identity),
+  `steps/clamav_scan.py` (skip/enforce modes, temp file always deleted
+  via try/finally), `steps/archive_check.py` (ZIP/gzip decompression-bomb
+  detection via metadata inspection, never extraction), `pipeline.py`
+  (`process_upload()`, the 7-step orchestrator), and `orchestrator.py`
+  (`run_analysis()`, connecting the upload pipeline to the bridge and
+  report engine). No bridge/ or report/ files were modified.
 
 ## Active Phase
-None — awaiting Phase 3 prompt
+None — awaiting Phase 4 prompt
 
 ## Next Phase
-Phase 3: Upload Pipeline
+Phase 4: API
 
 ## Test Count
-160 passing, 0 failing
+257 passing, 1 skipped (EICAR/ClamAV live-daemon test — see
+specs/TECH_DEBT.md TD-006), 0 failing
 
 ## Coverage
-100% on src/examina/report/, src/examina/bridge/, and src/examina/language/
+100% on src/examina/pipeline/, src/examina/report/, src/examina/bridge/,
+and src/examina/language/
 
 ## Known Blockers
-None blocking Phase 3. One standing workflow characteristic to be aware
+None blocking Phase 4. One standing workflow characteristic to be aware
 of: direct `git push` to `main` is permanently rejected by branch
 protection (required status checks can't be evaluated for a commit GitHub
 has never seen). All changes to `main` land via a short-lived branch + PR,
@@ -69,4 +86,8 @@ See specs/TECH_DEBT.md — TD-001 resolved (CI workflow exists and reports
 on every PR). TD-002 remains, permanent by design. TD-003 (bridge client
 stubs) and TD-004 (BRIDGE_SPEC v1.0→v1.1 amendment record) added in
 Phase 1. TD-005 (`HistoryEvent.supporting_signals` always empty pending
-Phase 3 signal-ID wiring) newly added this phase.
+Phase 3 signal-ID wiring) added in Phase 2. TD-006 (EICAR/ClamAV test
+skips without a live clamd daemon), TD-007 (tar/bzip2/7z archives
+rejected immediately pending a vetted extraction library), and TD-008
+(MIME detection via signature table instead of python-magic — see
+ADR-0002) newly added this phase.
