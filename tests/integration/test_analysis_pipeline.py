@@ -1,7 +1,13 @@
 """
 Integration tests for src/examina/pipeline/orchestrator.py — exercises
-the full upload -> bridge -> report pipeline against the LocalBridgeClient
-stub. clamav_mode='skip' throughout.
+the full upload -> bridge -> report pipeline against a fake bridge
+client (a fixed BridgeResult, injected via monkeypatching
+get_bridge_client). Real-PRISM-backed orchestrator tests live in
+tests/integration/test_real_bridge.py, gated behind PRISM's
+availability; this file stays hermetic so it always runs in CI,
+exercising the orchestrator's own logic (upload validation, hashing,
+report assembly, failure propagation) independent of PRISM.
+clamav_mode='skip' throughout.
 """
 
 from __future__ import annotations
@@ -11,6 +17,16 @@ import logging
 
 import pytest
 
+import examina.pipeline.orchestrator as orchestrator_module
+from examina.bridge.client import BridgeClient
+from examina.bridge.types import (
+    BridgeConfidence,
+    BridgeFact,
+    BridgeHypothesis,
+    BridgeRequest,
+    BridgeResult,
+    BridgeTimelineEvent,
+)
 from examina.pipeline.config import UploadConfig
 from examina.pipeline.exceptions import FileTooLargeError, InvalidMimeTypeError
 from examina.pipeline.orchestrator import run_analysis
@@ -20,10 +36,62 @@ from examina.report.schema import EXAMINA_DISCLAIMER, ExaminaReport
 JPEG_BYTES = bytes.fromhex("ffd8ffe000104a46494600010100000100010000") + b"\x00" * 20
 
 
+def _fake_bridge_result(request: BridgeRequest) -> BridgeResult:
+    return BridgeResult(
+        request_id=request.request_id,
+        bridge_version="bridge:1.0",
+        prism_version="fake:1.0",
+        rule_set_version="fake:1.0",
+        extractor_versions={"fake": "1.0"},
+        processing_time_ms=0,
+        facts=[
+            BridgeFact(
+                fact_id="fact-1",
+                statement="This file declares creation metadata.",
+                fact_type="PROVENANCE",
+                provenance_source_type="declared",
+                extractor="fake-extractor:1.0",
+                extraction_confidence=0.9,
+                source_reliability=0.8,
+                raw_value={},
+            )
+        ],
+        contradictions=[],
+        hypotheses=[
+            BridgeHypothesis(
+                hypothesis_id="hyp-1",
+                description="This file is consistent with an unedited original.",
+                confidence=0.6,
+                rank=1,
+            ),
+        ],
+        timeline=[BridgeTimelineEvent(sequence=1, description="Event.", confidence=0.7)],
+        reconstruction_confidence=BridgeConfidence(
+            overall=0.72,
+            penalty_from_contradictions=0.0,
+            unresolved_contradictions=0,
+            active_hypotheses=1,
+        ),
+        errors=[],
+        partial_analysis=False,
+        partial_reason=None,
+    )
+
+
+class _FakeBridgeClient(BridgeClient):
+    async def analyze(self, request: BridgeRequest) -> BridgeResult:
+        return _fake_bridge_result(request)
+
+    async def health_check(self) -> bool:
+        return True
+
+    def get_bridge_version(self) -> str:
+        return "bridge:1.0"
+
+
 @pytest.fixture(autouse=True)
-def _local_bridge_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("EXAMINA_ENV", raising=False)
-    monkeypatch.delenv("PRISM_PATH", raising=False)
+def _fake_bridge(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(orchestrator_module, "get_bridge_client", lambda: _FakeBridgeClient())
 
 
 def _run(data: bytes = JPEG_BYTES, config: UploadConfig | None = None) -> ExaminaReport:

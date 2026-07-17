@@ -1,11 +1,17 @@
-"""Tests for src/examina/api/database.py."""
+"""Tests for src/examina/api/database.py.
+
+BridgeResult objects are built directly here rather than via
+LocalBridgeClient, which since Phase 7 makes a real subprocess call into
+PRISM — unit tests must stay hermetic and PRISM-independent (see
+tests/integration/test_real_bridge.py for the real-PRISM-backed tests).
+"""
 
 from __future__ import annotations
 
-import asyncio
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 from sqlalchemy.orm import Session, sessionmaker
@@ -18,8 +24,13 @@ from examina.api.database import (
     get_report,
     save_report,
 )
-from examina.bridge.local_client import LocalBridgeClient
-from examina.bridge.types import BridgeRequest, BridgeResult
+from examina.bridge.types import (
+    BridgeConfidence,
+    BridgeFact,
+    BridgeHypothesis,
+    BridgeResult,
+    BridgeTimelineEvent,
+)
 from examina.report.assembler import assemble_report
 from examina.report.schema import ExaminaReport
 
@@ -27,13 +38,45 @@ VALID_HASH = "a" * 64
 
 
 def _bridge_result() -> BridgeResult:
-    request = BridgeRequest(
-        file_bytes=b"stub-bytes",
-        file_hash=VALID_HASH,
-        file_type="JPEG",
-        examina_version="0.4.0",
+    return BridgeResult(
+        request_id=uuid4(),
+        bridge_version="bridge:1.0",
+        prism_version="stub:1.0",
+        rule_set_version="stub:1.0",
+        extractor_versions={"stub": "1.0"},
+        processing_time_ms=0,
+        facts=[
+            BridgeFact(
+                fact_id="fact-1",
+                statement="This file declares creation metadata.",
+                fact_type="PROVENANCE",
+                provenance_source_type="declared",
+                extractor="stub-extractor:1.0",
+                extraction_confidence=0.9,
+                source_reliability=0.8,
+                raw_value={},
+            )
+        ],
+        contradictions=[],
+        hypotheses=[
+            BridgeHypothesis(
+                hypothesis_id="hyp-1",
+                description="This file is consistent with an unedited original.",
+                confidence=0.6,
+                rank=1,
+            ),
+        ],
+        timeline=[BridgeTimelineEvent(sequence=1, description="Event.", confidence=0.7)],
+        reconstruction_confidence=BridgeConfidence(
+            overall=0.72,
+            penalty_from_contradictions=0.0,
+            unresolved_contradictions=0,
+            active_hypotheses=1,
+        ),
+        errors=[],
+        partial_analysis=False,
+        partial_reason=None,
     )
-    return asyncio.run(LocalBridgeClient(prism_path=Path("../PRISM")).analyze(request))
 
 
 def _make_report() -> ExaminaReport:

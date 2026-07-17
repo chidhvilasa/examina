@@ -1,12 +1,14 @@
 # EXAMINA Project Status
 
 ## Current State
-Current Phase: Phase 6 Complete
-Current Version: 0.6.0
+Current Phase: Phase 7 Complete
+Current Version: 0.7.0
 Specification Version: 1.0.0 (FROZEN), BRIDGE_SPEC amended to 1.1.0 (see ADR-0001)
 Architecture: FROZEN
 Implementation: API + UI COMPLETE
-Status: BETA READY
+Status: INTEGRATION COMPLETE — ALPHA READY
+Bridge: REAL (LocalBridgeClient calling PRISM via subprocess)
+Analysis: REAL PRISM OUTPUT (not stub)
 
 ## Completed Phases
 - [x] Phase -1: GitHub Repository Setup
@@ -120,26 +122,67 @@ Status: BETA READY
   `src/examina/__init__.py`/`pyproject.toml` from the stale 0.4.0 (never
   updated in Phase 5) to 0.6.0. No `bridge/`, `report/`, or UI files were
   modified; no new features or endpoints added.
+- [x] Phase 7: Bridge Integration
+  Replaced `LocalBridgeClient`'s Phase 1 stub with a real subprocess
+  call into PRISM (`prism.bridge.cli`, added to PRISM this phase — see
+  PRISM's own CHANGELOG.md v0.3.2). Added `src/examina/bridge/
+  validator.py` (`validate_bridge_payload`/`parse_bridge_payload`),
+  rewrote `src/examina/bridge/local_client.py` in full (constructs
+  `python -m prism.bridge.cli` as a subprocess, feeds file bytes on
+  stdin, parses the JSON bridge payload from stdout, maps every failure
+  mode — timeout, missing PRISM, malformed JSON, schema violation,
+  non-zero exit — to the matching `BridgeError` code; no stub behavior
+  remains). Real PRISM analysis confirmed end to end for both JPEG and
+  PDF via 5 manual tests (`docs/INTEGRATION_TEST_RESULTS.md`) and 6
+  PRISM-gated automated integration tests
+  (`tests/integration/test_real_bridge.py`, skipped when PRISM isn't
+  available). No `report/`, `pipeline/`, `api/`, or `language/` files
+  were modified; no bridge schema (`BridgeResult` type) change — only
+  parsing/validation logic and the client implementation changed, as
+  required.
+  Ripple effect: several existing unit/integration tests
+  (`tests/unit/test_bridge_client.py`, `test_assembler.py`,
+  `test_api_database.py`, `tests/integration/test_analysis_pipeline.py`)
+  previously built their `BridgeResult` test fixtures by calling the old
+  free, instant `LocalBridgeClient` stub directly. Since that stub no
+  longer exists, each was updated to construct `BridgeResult` objects
+  inline (or, for `test_analysis_pipeline.py`, via a fake
+  `BridgeClient` injected through `monkeypatch`) instead — per the
+  prompt's own instruction: "If stub is needed for testing, use a
+  separate test fixture, not the real `LocalBridgeClient` class."
+  `test_bridge_client.py`'s `TestLocalBridgeClient` tests were rewritten
+  from asserting the old stub's exact fixed output (2 facts, 4
+  hypotheses, `prism_version="stub:1.0"`) to mocking `subprocess.run`
+  and covering every branch of the new implementation instead (success,
+  timeout, `FileNotFoundError`, generic exception, non-zero exit with/
+  without valid JSON stderr, invalid JSON stdout, schema-invalid stdout,
+  `health_check` success/failure paths, env-var-driven constructor
+  defaults) — this is what achieves 100% coverage on
+  `src/examina/bridge/` without requiring PRISM to be present.
 
 ## Active Phase
-None — awaiting Phase 7 prompt
+None — awaiting Phase 8 prompt
 
 ## Next Phase
-None scheduled — beta operation. Deploy to Hetzner, distribute invite
-codes, run the beta for 6-8 weeks, collect feedback, write the paper.
+None scheduled — alpha launch. Deploy to Hetzner, run a 1-week alpha
+with 3 journalists, collect feedback, then proceed to the 6-8 week
+research beta.
 
 ## Test Count
-Python: 343 passing, 1 skipped (EICAR/ClamAV live-daemon test — see
-specs/TECH_DEBT.md TD-006), 0 failing
+Python: 379 passing, 1 skipped (EICAR/ClamAV live-daemon test — see
+specs/TECH_DEBT.md TD-006), 0 failing (with PRISM_PATH/PRISM_PYTHON set
+to a real PRISM checkout; the 6 tests in
+tests/integration/test_real_bridge.py skip instead when PRISM is
+unavailable, so the "real" floor without PRISM present is 373 passing,
+7 skipped)
 UI: `tsc --noEmit` clean (0 errors), `npm run build` clean (0 errors)
-Dependency audit: `pip-audit` clean (0 vulnerabilities)
+PRISM: 900 passing, 2 skipped, 0 failing (own repository, v0.3.2)
 
 ## Coverage
 100% on src/examina/api/, src/examina/pipeline/, src/examina/report/,
-src/examina/bridge/, and src/examina/language/ (UI has no automated test
-suite — out of scope per the Phase 5 prompt; the Phase 6 stress tests
-live in tests/integration/ and are exercised by `pytest tests/` but not
-by the CI `unit-tests` job, which scopes to tests/unit/ only)
+src/examina/bridge/, and src/examina/language/ (measured via `pytest
+tests/` with PRISM available; UI has no automated test suite — out of
+scope per the Phase 5 prompt)
 
 ## Beta Readiness Checklist
 - [x] Security pipeline implemented (7 steps)
@@ -198,3 +241,13 @@ TD-012 (no CORS middleware on the API; the UI relies on the Vite dev
 proxy / same-origin production deployment instead) added in Phase 5,
 **resolved in Phase 6** (`CORSMiddleware` added to
 `src/examina/api/app.py`, configured via `EXAMINA_ALLOWED_ORIGINS`).
+TD-003 **partially resolved in Phase 7**: `LocalBridgeClient` is now
+real (subprocess call into PRISM); `RemoteBridgeClient` remains a stub
+pending a live remote PRISM deployment. TD-013 (`PRISM_PYTHON` is
+required-in-practice, not truly optional, for any real bridge call to
+succeed), TD-014 (`LocalBridgeClient.analyze()`'s blocking
+`subprocess.run()` inside an `async def` serializes concurrent
+`/analyze` requests under one process), and TD-015 (PRISM's cross-modal
+rule set produced an unusually high `unresolved_contradictions` count
+against a minimal synthetic PDF fixture — a PRISM-side observation, out
+of scope to investigate from EXAMINA) added in Phase 7.
