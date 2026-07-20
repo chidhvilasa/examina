@@ -358,9 +358,17 @@ class TestFeedback:
         response = client.post("/feedback", json={"understandability_score": 6})
         assert response.status_code == 422
 
-    def test_with_conclusion_correct_returns_200(self, client: TestClient) -> None:
-        response = client.post("/feedback", json={"conclusion_correct": "yes"})
+    def test_with_changed_assessment_returns_200(self, client: TestClient) -> None:
+        response = client.post("/feedback", json={"changed_assessment": "yes_significantly"})
         assert response.status_code == 200
+
+    def test_with_would_use_in_workflow_returns_200(self, client: TestClient) -> None:
+        response = client.post("/feedback", json={"would_use_in_workflow": "maybe"})
+        assert response.status_code == 200
+
+    def test_invalid_changed_assessment_returns_422(self, client: TestClient) -> None:
+        response = client.post("/feedback", json={"changed_assessment": "invalid_value"})
+        assert response.status_code == 422
 
 
 class TestFeedbackDatabaseFailure:

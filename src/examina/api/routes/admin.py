@@ -41,15 +41,30 @@ async def get_overview(
 
     mean_score = session.query(func.avg(FeedbackRecord.understandability_score)).scalar()
 
-    conclusion_correct_distribution = {"yes": 0, "no": 0, "unsure": 0}
+    changed_assessment_distribution = {
+        "yes_significantly": 0,
+        "yes_somewhat": 0,
+        "no": 0,
+        "unsure_before_and_after": 0,
+    }
     rows = (
-        session.query(FeedbackRecord.conclusion_correct, func.count(FeedbackRecord.id))
-        .group_by(FeedbackRecord.conclusion_correct)
+        session.query(FeedbackRecord.changed_assessment, func.count(FeedbackRecord.id))
+        .group_by(FeedbackRecord.changed_assessment)
         .all()
     )
     for value, count in rows:
-        if value in conclusion_correct_distribution:
-            conclusion_correct_distribution[value] = count
+        if value in changed_assessment_distribution:
+            changed_assessment_distribution[value] = count
+
+    workflow_adoption_distribution = {"yes": 0, "maybe": 0, "no": 0}
+    rows = (
+        session.query(FeedbackRecord.would_use_in_workflow, func.count(FeedbackRecord.id))
+        .group_by(FeedbackRecord.would_use_in_workflow)
+        .all()
+    )
+    for value, count in rows:
+        if value in workflow_adoption_distribution:
+            workflow_adoption_distribution[value] = count
 
     return {
         "total_analyses": total_analyses,
@@ -57,7 +72,8 @@ async def get_overview(
         "total_feedback": total_feedback,
         "total_incorrect_reports": total_incorrect_reports,
         "mean_understandability_score": float(mean_score) if mean_score is not None else None,
-        "conclusion_correct_distribution": conclusion_correct_distribution,
+        "changed_assessment_distribution": changed_assessment_distribution,
+        "workflow_adoption_distribution": workflow_adoption_distribution,
     }
 
 
@@ -95,10 +111,10 @@ async def get_feedback(
             "id": record.id,
             "report_id": record.report_id,
             "understandability_score": record.understandability_score,
-            "conclusion_correct": record.conclusion_correct,
-            "confusing_section": record.confusing_section,
-            "analysis_duration_ok": record.analysis_duration_ok,
-            "would_trust": record.would_trust,
+            "most_useful_section": record.most_useful_section,
+            "least_useful_section": record.least_useful_section,
+            "changed_assessment": record.changed_assessment,
+            "would_use_in_workflow": record.would_use_in_workflow,
             "created_at": record.created_at.isoformat(),
         }
         for record in records

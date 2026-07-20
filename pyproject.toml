@@ -1,6 +1,6 @@
 [project]
 name = "examina"
-version = "0.7.0"
+version = "0.8.0"
 description = "EXAMINA — Digital Evidence Intelligence for Journalists"
 requires-python = ">=3.11"
 dependencies = [

@@ -4,6 +4,17 @@ All notable changes to EXAMINA are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.8.0] — Pre-alpha preparation
+
+### Added
+- `docs/ALPHA_SUCCESS.md` — pre-defined success criteria
+- `scripts/export_alpha_snapshot.py` — weekly data export
+- `scripts/load_test.py` — pre-alpha load testing
+- `alpha-data/` structure for versioned research snapshots
+
+### Updated
+- FeedbackCard — 6-question research feedback form
+
 ## [0.7.0] — Real PRISM bridge integration
 
 EXAMINA now calls a real PRISM analysis for every upload instead of

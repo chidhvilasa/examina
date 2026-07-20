@@ -5,15 +5,27 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { submitFeedback } from "@/lib/api";
 
-type ConclusionCorrect = "yes" | "no" | "unsure";
+type SectionValue = "assessment" | "history" | "evidence" | "confidence" | "none";
+type ChangedAssessment =
+  | "yes_significantly"
+  | "yes_somewhat"
+  | "no"
+  | "unsure_before_and_after";
+type WorkflowAdoption = "yes" | "maybe" | "no";
 
-const CONFUSING_SECTION_OPTIONS = [
-  { value: "", label: "None" },
-  { value: "Assessment", label: "Assessment" },
-  { value: "Processing History", label: "Processing History" },
-  { value: "Evidence", label: "Evidence" },
-  { value: "Confidence", label: "Confidence" },
-  { value: "Overall", label: "Overall" },
+const SECTION_OPTIONS: { value: SectionValue; label: string }[] = [
+  { value: "assessment", label: "Assessment" },
+  { value: "history", label: "Processing History" },
+  { value: "evidence", label: "Evidence" },
+  { value: "confidence", label: "Confidence" },
+  { value: "none", label: "None" },
+];
+
+const CHANGED_ASSESSMENT_OPTIONS: { value: ChangedAssessment; label: string }[] = [
+  { value: "yes_significantly", label: "Yes, significantly" },
+  { value: "yes_somewhat", label: "Yes, somewhat" },
+  { value: "no", label: "No" },
+  { value: "unsure_before_and_after", label: "I was unsure before and remain unsure" },
 ];
 
 interface FeedbackCardProps {
@@ -22,11 +34,11 @@ interface FeedbackCardProps {
 
 export function FeedbackCard({ reportId }: FeedbackCardProps) {
   const [understandabilityScore, setUnderstandabilityScore] = useState<number | null>(null);
-  const [conclusionCorrect, setConclusionCorrect] = useState<ConclusionCorrect | null>(null);
-  const [confusingSection, setConfusingSection] = useState("");
-  const [analysisDurationOk, setAnalysisDurationOk] = useState<boolean | null>(null);
-  const [wouldTrust, setWouldTrust] = useState<boolean | null>(null);
-  const [comment, setComment] = useState("");
+  const [mostUsefulSection, setMostUsefulSection] = useState<SectionValue | null>(null);
+  const [leastUsefulSection, setLeastUsefulSection] = useState<SectionValue | null>(null);
+  const [changedAssessment, setChangedAssessment] = useState<ChangedAssessment | null>(null);
+  const [wouldUseInWorkflow, setWouldUseInWorkflow] = useState<WorkflowAdoption | null>(null);
+  const [missingInformation, setMissingInformation] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
@@ -35,11 +47,11 @@ export function FeedbackCard({ reportId }: FeedbackCardProps) {
     await submitFeedback({
       report_id: reportId,
       understandability_score: understandabilityScore,
-      conclusion_correct: conclusionCorrect,
-      confusing_section: confusingSection || null,
-      analysis_duration_ok: analysisDurationOk,
-      would_trust: wouldTrust,
-      optional_comment: comment || null,
+      most_useful_section: mostUsefulSection,
+      least_useful_section: leastUsefulSection,
+      changed_assessment: changedAssessment,
+      would_use_in_workflow: wouldUseInWorkflow,
+      missing_information: missingInformation || null,
     });
     setSubmitting(false);
     setSubmitted(true);
@@ -66,7 +78,7 @@ export function FeedbackCard({ reportId }: FeedbackCardProps) {
         </div>
 
         <div className="flex flex-col gap-2">
-          <p className="text-sm font-medium">How understandable was this report?</p>
+          <p className="text-sm font-medium">Was this report easy to understand?</p>
           <div className="flex gap-1">
             {[1, 2, 3, 4, 5].map((n) => (
               <button
@@ -92,15 +104,68 @@ export function FeedbackCard({ reportId }: FeedbackCardProps) {
         </div>
 
         <div className="flex flex-col gap-2">
-          <p className="text-sm font-medium">Was the conclusion correct?</p>
+          <p className="text-sm font-medium">Which section was most useful?</p>
+          <div className="flex flex-wrap gap-2">
+            {SECTION_OPTIONS.map((option) => (
+              <Button
+                key={option.value}
+                type="button"
+                size="sm"
+                variant={mostUsefulSection === option.value ? "default" : "outline"}
+                onClick={() => setMostUsefulSection(option.value)}
+              >
+                {option.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <p className="text-sm font-medium">Which section was least useful?</p>
+          <div className="flex flex-wrap gap-2">
+            {SECTION_OPTIONS.map((option) => (
+              <Button
+                key={option.value}
+                type="button"
+                size="sm"
+                variant={leastUsefulSection === option.value ? "default" : "outline"}
+                onClick={() => setLeastUsefulSection(option.value)}
+              >
+                {option.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <p className="text-sm font-medium">Did this report change your assessment of the file?</p>
+          <div className="flex flex-wrap gap-2">
+            {CHANGED_ASSESSMENT_OPTIONS.map((option) => (
+              <Button
+                key={option.value}
+                type="button"
+                size="sm"
+                variant={changedAssessment === option.value ? "default" : "outline"}
+                onClick={() => setChangedAssessment(option.value)}
+              >
+                {option.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <p className="text-sm font-medium">
+            Would you use this in your normal verification workflow?
+          </p>
           <div className="flex gap-2">
-            {(["yes", "no", "unsure"] as const).map((option) => (
+            {(["yes", "maybe", "no"] as const).map((option) => (
               <Button
                 key={option}
                 type="button"
                 size="sm"
-                variant={conclusionCorrect === option ? "default" : "outline"}
-                onClick={() => setConclusionCorrect(option)}
+                variant={wouldUseInWorkflow === option ? "default" : "outline"}
+                onClick={() => setWouldUseInWorkflow(option)}
                 className="capitalize"
               >
                 {option}
@@ -109,80 +174,21 @@ export function FeedbackCard({ reportId }: FeedbackCardProps) {
           </div>
         </div>
 
-        <div className="flex flex-col gap-2">
-          <label htmlFor="confusing-section" className="text-sm font-medium">
-            Which section confused you most?
-          </label>
-          <select
-            id="confusing-section"
-            value={confusingSection}
-            onChange={(e) => setConfusingSection(e.target.value)}
-            className="h-9 rounded-md border border-border bg-input px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
-          >
-            {CONFUSING_SECTION_OPTIONS.map((option) => (
-              <option key={option.label} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <p className="text-sm font-medium">Was the analysis fast enough?</p>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant={analysisDurationOk === true ? "default" : "outline"}
-              onClick={() => setAnalysisDurationOk(true)}
-            >
-              Yes
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={analysisDurationOk === false ? "default" : "outline"}
-              onClick={() => setAnalysisDurationOk(false)}
-            >
-              No
-            </Button>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <p className="text-sm font-medium">Would you trust this report professionally?</p>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant={wouldTrust === true ? "default" : "outline"}
-              onClick={() => setWouldTrust(true)}
-            >
-              Yes
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={wouldTrust === false ? "default" : "outline"}
-              onClick={() => setWouldTrust(false)}
-            >
-              No
-            </Button>
-          </div>
-        </div>
-
         <div className="flex flex-col gap-1">
-          <label htmlFor="feedback-comment" className="text-sm font-medium">
-            Additional comments (max 500 chars)
+          <label htmlFor="feedback-missing-information" className="text-sm font-medium">
+            What information was missing?
           </label>
           <textarea
-            id="feedback-comment"
-            value={comment}
-            onChange={(e) => setComment(e.target.value.slice(0, 500))}
+            id="feedback-missing-information"
+            value={missingInformation}
+            onChange={(e) => setMissingInformation(e.target.value.slice(0, 500))}
             maxLength={500}
+            placeholder="What would have helped you make a better decision?"
             className="min-h-20 rounded-md border border-border bg-input p-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
           />
-          <span className="self-end text-xs text-muted-foreground">{comment.length}/500</span>
+          <span className="self-end text-xs text-muted-foreground">
+            {missingInformation.length}/500
+          </span>
         </div>
 
         <Button
