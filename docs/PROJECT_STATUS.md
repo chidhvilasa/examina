@@ -1,14 +1,17 @@
 # EXAMINA Project Status
 
 ## Current State
-Current Phase: Phase 7 Complete
-Current Version: 0.7.0
+Current Phase: Pre-Alpha Complete
+Current Version: 0.8.0
 Specification Version: 1.0.0 (FROZEN), BRIDGE_SPEC amended to 1.1.0 (see ADR-0001)
 Architecture: FROZEN
 Implementation: API + UI COMPLETE
-Status: INTEGRATION COMPLETE — ALPHA READY
+Status: ALPHA READY
 Bridge: REAL (LocalBridgeClient calling PRISM via subprocess)
 Analysis: REAL PRISM OUTPUT (not stub)
+Feedback Form: Updated to 6-question research format
+Load Test: PASS (all 3 scenarios)
+Alpha Success Criteria: Defined in docs/ALPHA_SUCCESS.md
 
 ## Completed Phases
 - [x] Phase -1: GitHub Repository Setup
@@ -159,24 +162,56 @@ Analysis: REAL PRISM OUTPUT (not stub)
   `health_check` success/failure paths, env-var-driven constructor
   defaults) — this is what achieves 100% coverage on
   `src/examina/bridge/` without requiring PRISM to be present.
+- [x] Pre-Alpha Preparation
+  No new features, no architecture changes — three deliverables ahead
+  of the first real-user alpha. (1) `docs/ALPHA_SUCCESS.md` — 8 success
+  criteria (6 critical, 2 non-critical) written before any user is
+  invited, to prevent hindsight bias when interpreting alpha results.
+  (2) The feedback form was replaced end to end with a 6-question
+  research-format version:
+  `src/examina/api/models.py`'s `FeedbackRequest` (`most_useful_section`/
+  `least_useful_section`/`changed_assessment`/`would_use_in_workflow`/
+  `missing_information` replace `conclusion_correct`/`confusing_section`/
+  `analysis_duration_ok`/`would_trust`/`optional_comment`),
+  `src/examina/api/database.py`'s `FeedbackRecord` columns to match,
+  `src/examina/api/routes/feedback.py` and `routes/admin.py` (
+  `/admin/overview`'s distribution stats,
+  `/admin/feedback`'s paginated item shape) updated for the new field
+  names, and `src/examina/ui/src/components/cards/FeedbackCard.tsx`
+  rewritten with all 6 questions — verified end to end with a
+  Playwright-driven submission, zero console errors. No production
+  database exists yet, so no migration was needed for this schema
+  change (`specs/TECH_DEBT.md` TD-016 documents the migration a live
+  deployment would need). (3) `scripts/export_alpha_snapshot.py`
+  (stdlib-only, works outside the venv) and `scripts/load_test.py`
+  (stdlib-only, three scenarios: sequential/leak-detection, concurrent,
+  failure-path) plus the `alpha-data/` directory (raw per-record data
+  gitignored — Constitution Principle 7; only aggregate,
+  version-provenanced summaries are committed). The load test found and
+  fixed a real bug in its own verdict logic (not in EXAMINA) before
+  producing a clean PASS — see `docs/LOAD_TEST_RESULTS.md`. No
+  `pipeline/`, `report/`, or `bridge/` logic was modified; no new API
+  endpoints were added.
 
 ## Active Phase
-None — awaiting Phase 8 prompt
+None — awaiting alpha launch
 
 ## Next Phase
-None scheduled — alpha launch. Deploy to Hetzner, run a 1-week alpha
-with 3 journalists, collect feedback, then proceed to the 6-8 week
-research beta.
+None scheduled — alpha launch. Deploy to Hetzner, generate real invite
+codes, invite the first 3 journalists, run the alpha for at least one
+week against the criteria in `docs/ALPHA_SUCCESS.md`.
 
 ## Test Count
-Python: 379 passing, 1 skipped (EICAR/ClamAV live-daemon test — see
+Python: 396 passing, 1 skipped (EICAR/ClamAV live-daemon test — see
 specs/TECH_DEBT.md TD-006), 0 failing (with PRISM_PATH/PRISM_PYTHON set
 to a real PRISM checkout; the 6 tests in
 tests/integration/test_real_bridge.py skip instead when PRISM is
-unavailable, so the "real" floor without PRISM present is 373 passing,
+unavailable, so the "real" floor without PRISM present is 390 passing,
 7 skipped)
 UI: `tsc --noEmit` clean (0 errors), `npm run build` clean (0 errors)
 PRISM: 900 passing, 2 skipped, 0 failing (own repository, v0.3.2)
+Load test: PASS (all 3 scenarios — sequential, concurrent, failure
+paths; see docs/LOAD_TEST_RESULTS.md)
 
 ## Coverage
 100% on src/examina/api/, src/examina/pipeline/, src/examina/report/,
@@ -250,4 +285,9 @@ succeed), TD-014 (`LocalBridgeClient.analyze()`'s blocking
 `/analyze` requests under one process), and TD-015 (PRISM's cross-modal
 rule set produced an unusually high `unresolved_contradictions` count
 against a minimal synthetic PDF fixture — a PRISM-side observation, out
-of scope to investigate from EXAMINA) added in Phase 7.
+of scope to investigate from EXAMINA) added in Phase 7. TD-016 (the
+pre-alpha `FeedbackRecord` schema change has no migration path — fine
+for dev/test, since `create_all()` only creates missing tables and no
+production database exists yet; a real deployment with live feedback
+data would need an explicit migration before adopting this schema)
+added in Pre-Alpha Preparation.

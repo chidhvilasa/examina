@@ -49,19 +49,52 @@ class TestFeedbackRequestUnderstandabilityScore:
         assert request.understandability_score is None
 
 
-class TestFeedbackRequestCommentLength:
-    def test_optional_comment_over_500_chars_raises(self) -> None:
+class TestFeedbackRequestMissingInformationLength:
+    def test_missing_information_over_500_chars_raises(self) -> None:
         with pytest.raises(ValidationError):
-            FeedbackRequest(optional_comment="x" * 501)
+            FeedbackRequest(missing_information="x" * 501)
 
-    def test_optional_comment_at_500_chars_is_valid(self) -> None:
-        request = FeedbackRequest(optional_comment="x" * 500)
-        assert request.optional_comment is not None
-        assert len(request.optional_comment) == 500
+    def test_missing_information_at_500_chars_is_valid(self) -> None:
+        request = FeedbackRequest(missing_information="x" * 500)
+        assert request.missing_information is not None
+        assert len(request.missing_information) == 500
 
-    def test_confusing_section_over_100_chars_raises(self) -> None:
+
+class TestFeedbackRequestEnumFields:
+    def test_changed_assessment_invalid_value_raises(self) -> None:
         with pytest.raises(ValidationError):
-            FeedbackRequest(confusing_section="x" * 101)
+            FeedbackRequest(changed_assessment="invalid_value")
+
+    @pytest.mark.parametrize(
+        "value", ["yes_significantly", "yes_somewhat", "no", "unsure_before_and_after"]
+    )
+    def test_changed_assessment_valid_values(self, value: str) -> None:
+        request = FeedbackRequest(changed_assessment=value)  # type: ignore[arg-type]
+        assert request.changed_assessment == value
+
+    def test_would_use_in_workflow_invalid_value_raises(self) -> None:
+        with pytest.raises(ValidationError):
+            FeedbackRequest(would_use_in_workflow="invalid_value")
+
+    @pytest.mark.parametrize("value", ["yes", "maybe", "no"])
+    def test_would_use_in_workflow_valid_values(self, value: str) -> None:
+        request = FeedbackRequest(would_use_in_workflow=value)  # type: ignore[arg-type]
+        assert request.would_use_in_workflow == value
+
+    def test_most_useful_section_invalid_value_raises(self) -> None:
+        with pytest.raises(ValidationError):
+            FeedbackRequest(most_useful_section="invalid_value")
+
+    @pytest.mark.parametrize(
+        "value", ["assessment", "history", "evidence", "confidence", "none"]
+    )
+    def test_most_useful_section_valid_values(self, value: str) -> None:
+        request = FeedbackRequest(most_useful_section=value)  # type: ignore[arg-type]
+        assert request.most_useful_section == value
+
+    def test_least_useful_section_invalid_value_raises(self) -> None:
+        with pytest.raises(ValidationError):
+            FeedbackRequest(least_useful_section="invalid_value")
 
 
 class TestIncorrectAnalysisRequest:

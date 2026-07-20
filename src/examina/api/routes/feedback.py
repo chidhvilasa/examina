@@ -41,11 +41,11 @@ async def submit_feedback(
         record = FeedbackRecord(
             report_id=feedback.report_id,
             understandability_score=feedback.understandability_score,
-            conclusion_correct=feedback.conclusion_correct,
-            confusing_section=feedback.confusing_section,
-            analysis_duration_ok=feedback.analysis_duration_ok,
-            would_trust=feedback.would_trust,
-            optional_comment=feedback.optional_comment,
+            most_useful_section=feedback.most_useful_section,
+            least_useful_section=feedback.least_useful_section,
+            changed_assessment=feedback.changed_assessment,
+            would_use_in_workflow=feedback.would_use_in_workflow,
+            missing_information=feedback.missing_information,
         )
         session.add(record)
         session.commit()

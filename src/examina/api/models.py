@@ -53,11 +53,17 @@ class HealthResponse(BaseModel):
 class FeedbackRequest(BaseModel):
     report_id: str | None = None
     understandability_score: int | None = None
-    conclusion_correct: Literal["yes", "no", "unsure"] | None = None
-    confusing_section: str | None = Field(default=None, max_length=100)
-    analysis_duration_ok: bool | None = None
-    would_trust: bool | None = None
-    optional_comment: str | None = Field(default=None, max_length=500)
+    most_useful_section: (
+        Literal["assessment", "history", "evidence", "confidence", "none"] | None
+    ) = None
+    least_useful_section: (
+        Literal["assessment", "history", "evidence", "confidence", "none"] | None
+    ) = None
+    changed_assessment: (
+        Literal["yes_significantly", "yes_somewhat", "no", "unsure_before_and_after"] | None
+    ) = None
+    would_use_in_workflow: Literal["yes", "maybe", "no"] | None = None
+    missing_information: str | None = Field(default=None, max_length=500)
 
     @field_validator("understandability_score")
     @classmethod

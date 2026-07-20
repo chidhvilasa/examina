@@ -10,7 +10,7 @@ import os
 from collections.abc import Generator
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, Float, Integer, String, Text, create_engine
+from sqlalchemy import DateTime, Float, Integer, String, Text, create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -50,11 +50,11 @@ class FeedbackRecord(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     report_id: Mapped[str | None] = mapped_column(String, index=True, nullable=True)
     understandability_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    conclusion_correct: Mapped[str | None] = mapped_column(String, nullable=True)
-    confusing_section: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    analysis_duration_ok: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
-    would_trust: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
-    optional_comment: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    most_useful_section: Mapped[str | None] = mapped_column(String, nullable=True)
+    least_useful_section: Mapped[str | None] = mapped_column(String, nullable=True)
+    changed_assessment: Mapped[str | None] = mapped_column(String, nullable=True)
+    would_use_in_workflow: Mapped[str | None] = mapped_column(String, nullable=True)
+    missing_information: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_naive_utcnow, nullable=False)
 
 

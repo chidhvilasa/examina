@@ -43,6 +43,13 @@ node_modules/
 dist/
 .next/
 
+# Alpha research data — raw records are privacy-sensitive and never
+# committed; aggregate summaries (version-provenanced, no free text or
+# per-user identifiers) are the only alpha-data/ files tracked in git.
+alpha-data/week*/raw_feedback.json
+alpha-data/week*/raw_incorrect.json
+alpha-data/load_test_results.json
+
 # OS
 .DS_Store
 Thumbs.db
